@@ -31,40 +31,47 @@ public class ProxyConnectionHandler implements Runnable{
             int bytesRead = proxyInputStream.read(bytes, 0, BUFFER_SIZE);
             String request = new String(bytes);
 
-            Log.d("ACHTUNG", "Request: " + request);
+            Log.d("**~~~** Request: ", request);
 
             String host = extractHost(request);
+            Log.d("**~~~** Request Host: ", host);
 
             int port = request.startsWith("CONNECT") ? 443 : 80;
-            mOutsideSocket = new Socket(host, port);
-            OutputStream outsideOutputStream = mOutsideSocket.getOutputStream();
-            outsideOutputStream.write(bytes, 0, bytesRead);
-            outsideOutputStream.flush();
 
-            InputStream outsideSocketInputStream = mOutsideSocket.getInputStream();
-            OutputStream proxyOutputStream = mProxySocket.getOutputStream();
-            byte[] responseArray = new byte[BUFFER_SIZE];
+            if (port == 443) {
+                new Https443RequestHandler(mProxySocket).handle(request);
+            } else {
 
-            do
-            {
-                bytesRead = outsideSocketInputStream.read(responseArray, 0, BUFFER_SIZE);
-                if (bytesRead > 0)
-                {
-                    proxyOutputStream.write(responseArray, 0, bytesRead);
-                    String response = new String(bytes, 0, bytesRead);
-                    Log.d("ACHTUNG", "Response: " + response);
-                }
-            } while (bytesRead > 0);
+                mOutsideSocket = new Socket(host, port);
+                OutputStream outsideOutputStream = mOutsideSocket.getOutputStream();
+                outsideOutputStream.write(bytes, 0, bytesRead);
+                outsideOutputStream.flush();
 
-            proxyOutputStream.flush();
-            mOutsideSocket.close();
-            mProxySocket.close();
+                InputStream outsideSocketInputStream = mOutsideSocket.getInputStream();
+                OutputStream proxyOutputStream = mProxySocket.getOutputStream();
+                byte[] responseArray = new byte[BUFFER_SIZE];
 
-            Log.d("ACHTUNG", "Cycle: " + (System.currentTimeMillis() - startTimestamp));
+                do {
+                    bytesRead = outsideSocketInputStream.read(responseArray, 0, BUFFER_SIZE);
+                    if (bytesRead > 0) {
+                        proxyOutputStream.write(responseArray, 0, bytesRead);
+                        String response = new String(bytes, 0, bytesRead);
+                        Log.d("Outside IPS Response: ", response);
+                    }
+                } while (bytesRead > 0);
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+
+                proxyOutputStream.flush();
+                mOutsideSocket.close();
+            }
+                mProxySocket.close();
+
+                Log.d("ACHTUNG", "Cycle: " + (System.currentTimeMillis() - startTimestamp));
+
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+
     }
 
     private String extractHost(String request) {

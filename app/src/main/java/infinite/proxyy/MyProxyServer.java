@@ -21,7 +21,7 @@ public class MyProxyServer {
         //} catch (Exception e) {
             //ignore me
 //        }
-        Log.d("iinsiiiiiddeeeee", "");
+
         try {
             serverSocket = new ServerSocket(port);
             Log.d("Started on: ", ""+port);
@@ -31,7 +31,16 @@ public class MyProxyServer {
         }
 
         while (listening) {
-            new ProxyThread(serverSocket.accept()).start();
+           // new ProxyThread(serverSocket.accept()).start();
+            try {
+                Socket proxySocket = serverSocket.accept();
+                ProxyConnectionHandler proxyConnectionHandler = new ProxyConnectionHandler(proxySocket);
+                new Thread(proxyConnectionHandler).start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
         }
         serverSocket.close();
     }
